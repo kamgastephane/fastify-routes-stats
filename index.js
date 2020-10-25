@@ -8,7 +8,7 @@ const ONSEND = 'on-send-'
 const ONREQUEST = 'on-request-'
 const ROUTES = 'fastify-routes:'
 
-module.exports = fp(async function (fastify, opts) {
+module.exports = fp(async function (fastify, opts = { log: false }) {
   let observedEntries = {}
   const obs = new PerformanceObserver((items) => {
     const fetchedItems = items.getEntries()
@@ -59,11 +59,16 @@ module.exports = fp(async function (fastify, opts) {
   fastify.decorate('measurements', measurements)
   fastify.decorate('stats', stats)
 
-  const interval = setInterval(() => fastify.log.info({ stats: stats() }, 'routes stats'), 30000)
-  interval.unref()
+  let interval
+  if (opts.log === true) {
+    interval = setInterval(() => fastify.log.info({ stats: stats() }, 'routes stats'), 30000)
+    interval.unref()
+  }
 
   fastify.onClose(function () {
-    clearInterval(interval)
+    if (interval) {
+      clearInterval(interval)
+    }
     obs.disconnect()
     observedEntries = {}
   })
@@ -73,7 +78,7 @@ module.exports = fp(async function (fastify, opts) {
     return observedEntries
   }
 
-  function stats () {
+  function stats ({ percentile = [] } = {}) {
     const m = measurements()
     observedEntries = {}
     const results = {}
@@ -89,14 +94,23 @@ module.exports = fp(async function (fastify, opts) {
         if (!results[method]) {
           results[method] = {}
         }
-
+        const percentiles = {}
+        if (percentile) {
+          percentile.reduce((acc, currentValue) => {
+            if (currentValue > 0 && currentValue < 1) {
+              acc[currentValue * 100] = s.quartile(currentValue)
+            }
+          }, percentiles)
+        }
         results[method][route] = {
           mean: s.mean(),
           mode: s.mode(),
           median: s.median(),
           max: s.max(),
           min: s.min(),
-          sd: s.sd()
+          sd: s.sd(),
+          perc: percentiles
+
         }
       }
     }

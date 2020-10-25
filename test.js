@@ -157,3 +157,30 @@ test('produces stats for multiple methods', async (t) => {
   t.ok(posts[0] >= 0)
   t.ok(posts.length === 1)
 })
+
+test('creates stats with percentile', async (t) => {
+  const fastify = Fastify()
+  fastify.register(Stats)
+
+  t.tearDown(fastify.close.bind(fastify))
+
+  fastify.get('/', async () => {
+    return { hello: 'world' }
+  })
+
+  await fastify.inject({
+    url: '/'
+  })
+
+  await fastify.inject({
+    url: '/'
+  })
+
+  await fastify.inject({
+    url: '/'
+  })
+
+  const stats = fastify.stats({ percentile: [.9] })
+  const nums = stats.GET['/']
+  t.ok(nums.percentile['90'] >= 0)
+})

@@ -34,7 +34,7 @@ fastify.get(
 
 fastify.get('/__stats__', async function () {
   // stats is added to the fastify instance
-  return this.stats()
+  return this.stats({ percentile: [.9] })
 })
 
 fastify.listen(3000)
@@ -50,7 +50,9 @@ $ curl -s localhost:3000/__stats__ | jsonlint
       "median": 0.121999,
       "max": 0.755647,
       "min": 0.050214,
-      "sd": 0.2905856386253457
+      "sd": 0.2905856386253457,
+      "perc": {
+         "90": 0.720323,
     }
   },
   "POST": {
@@ -60,13 +62,19 @@ $ curl -s localhost:3000/__stats__ | jsonlint
       "median": 0.055179,
       "max": 0.292262,
       "min": 0.044159,
-      "sd": 0.10438752062722824
+      "sd": 0.10438752062722824,
+      "perc": {
+         "90": 0.280323,
+      }
     }
   }
 }
 ```
 
-It will also log a stat object every 30 seconds.
+It will also log a stat object every 30 seconds if enabled.
+```
+fastify.register(require('.'), { log: true} )
+```
 
 ## License
 
